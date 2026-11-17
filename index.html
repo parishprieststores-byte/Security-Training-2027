@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Training 2027">
+<meta name="theme-color" content="#1d3557">
+<title>Security Training Program 2027</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#16202e;--mute:#5b6778;--navy:#1d3557;--amber:#f2a900;--line:#d9dee6;--ok:#1f7a4d;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10171f;--card:#19232f;--ink:#e8edf3;--mute:#9aa7b8;--navy:#7fa6d8;--amber:#f2b52a;--line:#2b3846;--ok:#4cc38a;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",Roboto,Arial,sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+header{background:#1d3557;color:#fff;padding:calc(22px + env(safe-area-inset-top,0px)) 16px 18px;border-bottom:5px solid var(--amber)}
+header h1{margin:0;font-size:1.45rem;line-height:1.2}
+header p{margin:6px 0 0;opacity:.85;font-size:.92rem}
+main{max-width:760px;margin:0 auto;padding:16px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button{font:inherit;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:var(--navy);color:#fff;font-weight:600}
+@media (prefers-color-scheme:dark){button{color:#10171f}}
+button.alt{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.next{background:var(--card);border-left:6px solid var(--amber);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.next b{display:block}
+.row{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.date{min-width:62px;text-align:center;border-right:1px solid var(--line);padding-right:12px}
+.date strong{display:block;font-size:1.6rem;line-height:1}
+.date span{font-size:.8rem;color:var(--mute)}
+.info{flex:1;min-width:0}
+.info h3{margin:0;font-size:1rem}
+.chip{display:inline-block;font-size:.78rem;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mute);margin-top:4px}
+.chip.done{color:var(--ok);border-color:var(--ok)}
+.chip.due{color:var(--ink);background:var(--amber);border-color:var(--amber)}
+.row button{white-space:nowrap;padding:8px 10px;font-size:.9rem}
+dialog{width:min(560px,94vw);border:0;border-radius:12px;padding:18px;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 3px}
+input,textarea{width:100%;font:inherit;padding:9px;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.act{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+footer{text-align:center;color:var(--mute);font-size:.82rem;padding:18px}
+@media (max-width:480px){.row{flex-wrap:wrap}.row button{width:100%}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Annual Security Training Program 2027</h1>
+  <p>12 monthly sessions. Export the program, and record a report after every meeting.</p>
+</header>
+<main>
+  <div class="bar">
+    <button id="xl">Export program (Excel)</button>
+    <button id="pd">Export program (PDF)</button>
+    <button id="rx" class="alt">Export all reports (Excel)</button>
+  </div>
+  <div id="next" class="next"></div>
+  <div id="list"></div>
+</main>
+<footer>Reports are saved on this device. Export them to Excel or PDF to keep a copy.</footer>
+
+<dialog id="dlg">
+  <h2 id="dt" style="margin:0 0 4px;font-size:1.15rem"></h2>
+  <div id="ds" style="color:var(--mute);font-size:.9rem"></div>
+  <div class="two">
+    <div><label for="f_date">Date held</label><input id="f_date" type="date"></div>
+    <div><label for="f_venue">Venue</label><input id="f_venue"></div>
+  </div>
+  <div class="two">
+    <div><label for="f_trainer">Trainer / facilitator</label><input id="f_trainer"></div>
+    <div><label for="f_dur">Duration (hours)</label><input id="f_dur" type="number" min="0" step="0.5"></div>
+  </div>
+  <label for="f_att">Attendees (one name per line)</label>
+  <textarea id="f_att" rows="5"></textarea>
+  <label for="f_cov">Points covered</label>
+  <textarea id="f_cov" rows="3"></textarea>
+  <label for="f_obs">Observations and challenges</label>
+  <textarea id="f_obs" rows="3"></textarea>
+  <label for="f_act">Action points and follow-up</label>
+  <textarea id="f_act" rows="3"></textarea>
+  <div class="act">
+    <button id="sv">Save report</button>
+    <button id="rp" class="alt">Download report (PDF)</button>
+    <button id="cl" class="alt">Close</button>
+  </div>
+</dialog>
+
+<script>
+const P=[
+["January","ACCESS CONTROL / GATE MANAGEMENT","2027-01-15"],
+["February","SECURITY AWARENESS AND RESPONSIBILITIES","2027-02-12"],
+["March","PATROLLING / SURVEILLANCE","2027-03-19"],
+["April","SECURITY COMMUNICATION AND REPORTING","2027-04-30"],
+["May","THEFT PREVENTION AND PROTECTION OF COMPANY ASSETS","2027-05-21"],
+["June","EMERGENCY RESPONSE AND CRISIS MANAGEMENT","2027-06-25"],
+["July","FIRE PREVENTION AND FIREFIGHTING TECHNIQUES","2027-07-23"],
+["August","PROFESSIONAL CONDUCT AND DISCIPLINE","2027-08-20"],
+["September","SECURITY INVESTIGATION TECHNIQUES","2027-09-24"],
+["October","SITUATIONAL AWARENESS AND THREATS DETECTION","2027-10-29"],
+["November","SECURITY DOCUMENTATION","2027-11-26"],
+["December","REVIEW OF SECURITY ACTIVITIES IN THE OUTGOING YEAR","2027-12-10"]
+];
+const KEY="stp2027_reports";
+let R={},cur=0;
+try{R=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){R={}}
+const $=id=>document.getElementById(id);
+const FIELDS=["date","venue","trainer","dur","att","cov","obs","act"];
+const ord=n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])};
+const fmt=iso=>{const d=new Date(iso+"T00:00:00");return ord(d.getDate())+" "+P.find(p=>p[2]===iso)[0]+" 2027"};
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(R))}catch(e){alert("This device could not save the report. Download the PDF instead.")}}
+function render(){
+  const today=new Date().toISOString().slice(0,10);
+  const nx=P.findIndex((p,i)=>!R[i]&&p[2]>=today);
+  $("next").innerHTML=nx<0?"<b>All sessions are either completed or past their date.</b>":"<b>Next session</b>"+P[nx][1]+" on "+fmt(P[nx][2]);
+  $("list").innerHTML=P.map((p,i)=>{
+    const done=!!R[i],due=!done&&p[2]<today;
+    const d=new Date(p[2]+"T00:00:00");
+    return `<div class="row"><div class="date"><strong>${d.getDate()}</strong><span>${p[0].slice(0,3)}</span></div>
+    <div class="info"><h3>${p[1]}</h3><span class="chip ${done?"done":due?"due":""}">${done?"Report saved":due?"Report due":"Upcoming"}</span></div>
+    <button class="${done?"alt":""}" data-i="${i}">${done?"View report":"Write report"}</button></div>`}).join("");
+  document.querySelectorAll(".row button").forEach(b=>b.onclick=()=>openR(+b.dataset.i));
+}
+function openR(i){
+  cur=i;const r=R[i]||{date:P[i][2]};
+  $("dt").textContent=P[i][0]+": "+P[i][1];
+  $("ds").textContent="Scheduled for "+fmt(P[i][2]);
+  FIELDS.forEach(f=>$("f_"+f).value=r[f]||"");
+  $("dlg").showModal();
+}
+function grab(){const r={};FIELDS.forEach(f=>r[f]=$("f_"+f).value.trim());r.saved=new Date().toISOString();return r}
+$("sv").onclick=()=>{R[cur]=grab();persist();$("dlg").close();render()};
+$("cl").onclick=()=>$("dlg").close();
+const names=a=>(a||"").split("\n").map(s=>s.trim()).filter(Boolean);
+
+$("xl").onclick=()=>{
+  const rows=P.map((p,i)=>({"S/N":i+1,"Month":p[0],"Topic":p[1],"Date":fmt(p[2]),"Status":R[i]?"Report saved":"Scheduled"}));
+  const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[{wch:5},{wch:12},{wch:55},{wch:20},{wch:14}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Program 2027");
+  XLSX.writeFile(wb,"Security_Training_Program_2027.xlsx");
+};
+$("pd").onclick=()=>{
+  const {jsPDF}=window.jspdf,doc=new jsPDF();
+  doc.setFontSize(15);doc.text("ANNUAL SECURITY TRAINING PROGRAM FOR 2027",14,18);
+  doc.autoTable({startY:26,head:[["S/N","Month","Topic","Date"]],body:P.map((p,i)=>[i+1,p[0].toUpperCase(),p[1],fmt(p[2])]),headStyles:{fillColor:[29,53,87]},styles:{fontSize:10}});
+  doc.save("Security_Training_Program_2027.pdf");
+};
+$("rx").onclick=()=>{
+  const ks=Object.keys(R);if(!ks.length){alert("No reports saved yet. Write a report after a meeting first.");return}
+  const rows=ks.sort((a,b)=>a-b).map(i=>{const r=R[i];return{"Month":P[i][0],"Topic":P[i][1],"Date held":r.date,"Venue":r.venue,"Trainer":r.trainer,"Hours":r.dur,"Attendance":names(r.att).length,"Attendees":names(r.att).join(", "),"Points covered":r.cov,"Observations":r.obs,"Action points":r.act}});
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Meeting reports");
+  XLSX.writeFile(wb,"Security_Training_Reports_2027.xlsx");
+};
+$("rp").onclick=()=>{
+  const r=grab(),a=names(r.att),{jsPDF}=window.jspdf,doc=new jsPDF();
+  doc.setFontSize(15);doc.text("TRAINING MEETING REPORT",14,18);
+  doc.setFontSize(11);doc.text("Security Training Program 2027",14,25);
+  doc.autoTable({startY:31,theme:"grid",headStyles:{fillColor:[29,53,87]},columnStyles:{0:{cellWidth:48,fontStyle:"bold"}},body:[
+   ["Month",P[cur][0]],["Topic",P[cur][1]],["Scheduled date",fmt(P[cur][2])],["Date held",r.date],["Venue",r.venue],["Trainer",r.trainer],["Duration (hours)",r.dur],["Number attended",String(a.length)],
+   ["Points covered",r.cov],["Observations and challenges",r.obs],["Action points",r.act]]});
+  doc.autoTable({startY:doc.lastAutoTable.finalY+8,head:[["#","Attendee","Signature"]],body:a.map((n,i)=>[i+1,n,""]),headStyles:{fillColor:[29,53,87]}});
+  doc.save("Training_Report_"+P[cur][0]+"_2027.pdf");
+};
+render();
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>
