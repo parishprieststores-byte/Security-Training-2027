@@ -12,9 +12,6 @@
 <meta name="apple-mobile-web-app-title" content="Training 2027">
 <meta name="theme-color" content="#1d3557">
 <title>Security Training Program 2027</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--bg:#f3f5f8;--card:#fff;--ink:#16202e;--mute:#5b6778;--navy:#1d3557;--amber:#f2a900;--line:#d9dee6;--ok:#1f7a4d;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#10171f;--card:#19232f;--ink:#e8edf3;--mute:#9aa7b8;--navy:#7fa6d8;--amber:#f2b52a;--line:#2b3846;--ok:#4cc38a;color-scheme:dark}}
@@ -66,7 +63,7 @@ footer{text-align:center;color:var(--mute);font-size:.82rem;padding:18px}
   <div id="next" class="next"></div>
   <div id="list"></div>
 </main>
-<footer>Reports are saved on this device. Export them to Excel or PDF to keep a copy.</footer>
+<footer>Works offline. Reports are saved on this device. Export them to Excel or PDF to keep a copy.</footer>
 
 <dialog id="dlg">
   <h2 id="dt" style="margin:0 0 4px;font-size:1.15rem"></h2>
@@ -141,33 +138,91 @@ $("sv").onclick=()=>{R[cur]=grab();persist();$("dlg").close();render()};
 $("cl").onclick=()=>$("dlg").close();
 const names=a=>(a||"").split("\n").map(s=>s.trim()).filter(Boolean);
 
-$("xl").onclick=()=>{
-  const rows=P.map((p,i)=>({"S/N":i+1,"Month":p[0],"Topic":p[1],"Date":fmt(p[2]),"Status":R[i]?"Report saved":"Scheduled"}));
-  const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[{wch:5},{wch:12},{wch:55},{wch:20},{wch:14}];
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Program 2027");
-  XLSX.writeFile(wb,"Security_Training_Program_2027.xlsx");
-};
-$("pd").onclick=()=>{
-  const {jsPDF}=window.jspdf,doc=new jsPDF();
-  doc.setFontSize(15);doc.text("ANNUAL SECURITY TRAINING PROGRAM FOR 2027",14,18);
-  doc.autoTable({startY:26,head:[["S/N","Month","Topic","Date"]],body:P.map((p,i)=>[i+1,p[0].toUpperCase(),p[1],fmt(p[2])]),headStyles:{fillColor:[29,53,87]},styles:{fontSize:10}});
-  doc.save("Security_Training_Program_2027.pdf");
-};
+/* ---- Offline export tools (no internet libraries needed) ---- */
+const enc=new TextEncoder();
+const CT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zip(files){
+  const parts=[],cen=[];let off=0;
+  for(const [name,txt] of files){
+    const n=enc.encode(name),d=enc.encode(txt),c=crc(d);
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint32(14,c,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,n.length,true);
+    parts.push(new Uint8Array(h.buffer),n,d);
+    const e=new DataView(new ArrayBuffer(46));
+    e.setUint32(0,0x02014b50,true);e.setUint16(4,20,true);e.setUint16(6,20,true);e.setUint32(16,c,true);e.setUint32(20,d.length,true);e.setUint32(24,d.length,true);e.setUint16(28,n.length,true);e.setUint32(42,off,true);
+    cen.push(new Uint8Array(e.buffer),n);
+    off+=30+n.length+d.length;
+  }
+  let cl=0;cen.forEach(x=>cl+=x.length);
+  const f=new DataView(new ArrayBuffer(22));
+  f.setUint32(0,0x06054b50,true);f.setUint16(8,files.length,true);f.setUint16(10,files.length,true);f.setUint32(12,cl,true);f.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(f.buffer)],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+const xe=s=>String(s==null?"":s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const col=i=>{let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function makeXlsx(sheet,rows,widths){
+  const sd=rows.map((r,ri)=>`<row r="${ri+1}">`+r.map((v,ci)=>{const ref=col(ci)+(ri+1);return typeof v==="number"?`<c r="${ref}"><v>${v}</v></c>`:`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`}).join("")+"</row>").join("");
+  const cols="<cols>"+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")+"</cols>";
+  const H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  return zip([
+   ["[Content_Types].xml",H+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],
+   ["_rels/.rels",H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+   ["xl/workbook.xml",H+`<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xe(sheet)}" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+   ["xl/_rels/workbook.xml.rels",H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'],
+   ["xl/worksheets/sheet1.xml",H+`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${cols}<sheetData>${sd}</sheetData></worksheet>`]
+  ]);
+}
+function makePdf(items){
+  const W=595,H=842,M=40,pages=[];let cur,y;
+  const esc=s=>String(s==null?"":s).replace(/[^\x20-\xFF]/g,"?").replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+  const np=()=>{cur=[];pages.push(cur);y=H-M};np();
+  const wrap=(s,n)=>{const o=[];String(s==null?"":s).split("\n").forEach(p=>{let l="";p.split(" ").forEach(w=>{while(w.length>n){if(l){o.push(l);l=""}o.push(w.slice(0,n));w=w.slice(n)}if((l+" "+w).trim().length>n){o.push(l);l=w}else l=(l+" "+w).trim()});o.push(l)});return o};
+  const T=(f,sz,x,yy,s)=>`BT /${f} ${sz} Tf ${x} ${yy} Td (${esc(s)}) Tj ET`;
+  for(const it of items){
+    if(it.h){if(y-30<M)np();cur.push("0 g",T("F2",it.size||14,M,y-14,it.h));y-=(it.size||14)+12;continue}
+    const cw=it.w.map(w=>w/it.w.reduce((a,b)=>a+b)*(W-2*M));
+    const ls=it.row.map((c,i)=>wrap(c,Math.max(3,Math.floor((cw[i]-8)/5.3))));
+    const n=Math.max(1,...ls.map(l=>l.length)),h=n*12+8;
+    if(y-h<M)np();
+    let x=M;
+    ls.forEach((l,i)=>{
+      if(it.head)cur.push("0.11 0.21 0.34 rg",`${x} ${y-h} ${cw[i]} ${h} re f`,"1 g");
+      else cur.push("0 G 0.5 w",`${x} ${y-h} ${cw[i]} ${h} re S`,"0 g");
+      l.forEach((t,k)=>cur.push(T(it.head||(it.bold0&&i===0)?"F2":"F1",10,x+4,y-12-k*12,t)));
+      x+=cw[i];
+    });
+    y-=h;
+  }
+  let out="%PDF-1.4\n";const offs=[];
+  const add=(i,s)=>{offs[i]=out.length;out+=i+" 0 obj\n"+s+"\nendobj\n"};
+  const kids=pages.map((_,k)=>(6+2*k)+" 0 R").join(" ");
+  add(1,"<< /Type /Catalog /Pages 2 0 R >>");
+  add(2,`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
+  add(3,"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+  add(4,"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+  pages.forEach((p,k)=>{const s=p.join("\n");add(5+2*k,`<< /Length ${s.length} >>\nstream\n${s}\nendstream`);add(6+2*k,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${5+2*k} 0 R >>`)});
+  const total=5+2*pages.length,xr=out.length;
+  out+=`xref\n0 ${total}\n0000000000 65535 f \n`;
+  for(let i=1;i<total;i++)out+=String(offs[i]).padStart(10,"0")+" 00000 n \n";
+  out+=`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+  const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
+  return new Blob([u],{type:"application/pdf"});
+}
+function save(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+
+$("xl").onclick=()=>save(makeXlsx("Program 2027",[["S/N","Month","Topic","Date","Status"],...P.map((p,i)=>[i+1,p[0],p[1],fmt(p[2]),R[i]?"Report saved":"Scheduled"])],[6,12,55,20,14]),"Security_Training_Program_2027.xlsx");
+$("pd").onclick=()=>save(makePdf([{h:"ANNUAL SECURITY TRAINING PROGRAM FOR 2027"},{head:1,row:["S/N","Month","Topic","Date"],w:[8,16,55,21]},...P.map((p,i)=>({row:[String(i+1),p[0].toUpperCase(),p[1],fmt(p[2])],w:[8,16,55,21]}))]),"Security_Training_Program_2027.pdf");
 $("rx").onclick=()=>{
-  const ks=Object.keys(R);if(!ks.length){alert("No reports saved yet. Write a report after a meeting first.");return}
-  const rows=ks.sort((a,b)=>a-b).map(i=>{const r=R[i];return{"Month":P[i][0],"Topic":P[i][1],"Date held":r.date,"Venue":r.venue,"Trainer":r.trainer,"Hours":r.dur,"Attendance":names(r.att).length,"Attendees":names(r.att).join(", "),"Points covered":r.cov,"Observations":r.obs,"Action points":r.act}});
-  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Meeting reports");
-  XLSX.writeFile(wb,"Security_Training_Reports_2027.xlsx");
+  const ks=Object.keys(R).sort((a,b)=>a-b);if(!ks.length){alert("No reports saved yet. Write a report after a meeting first.");return}
+  save(makeXlsx("Meeting reports",[["Month","Topic","Date held","Venue","Trainer","Hours","Attendance","Attendees","Points covered","Observations","Action points"],...ks.map(i=>{const r=R[i];return[P[i][0],P[i][1],r.date,r.venue,r.trainer,r.dur,names(r.att).length,names(r.att).join(", "),r.cov,r.obs,r.act]})],[12,40,12,18,18,8,11,40,40,40,40]),"Security_Training_Reports_2027.xlsx");
 };
 $("rp").onclick=()=>{
-  const r=grab(),a=names(r.att),{jsPDF}=window.jspdf,doc=new jsPDF();
-  doc.setFontSize(15);doc.text("TRAINING MEETING REPORT",14,18);
-  doc.setFontSize(11);doc.text("Security Training Program 2027",14,25);
-  doc.autoTable({startY:31,theme:"grid",headStyles:{fillColor:[29,53,87]},columnStyles:{0:{cellWidth:48,fontStyle:"bold"}},body:[
-   ["Month",P[cur][0]],["Topic",P[cur][1]],["Scheduled date",fmt(P[cur][2])],["Date held",r.date],["Venue",r.venue],["Trainer",r.trainer],["Duration (hours)",r.dur],["Number attended",String(a.length)],
-   ["Points covered",r.cov],["Observations and challenges",r.obs],["Action points",r.act]]});
-  doc.autoTable({startY:doc.lastAutoTable.finalY+8,head:[["#","Attendee","Signature"]],body:a.map((n,i)=>[i+1,n,""]),headStyles:{fillColor:[29,53,87]}});
-  doc.save("Training_Report_"+P[cur][0]+"_2027.pdf");
+  const r=grab(),a=names(r.att),w=[30,70],kv=(k,v)=>({row:[k,v||""],w,bold0:1});
+  save(makePdf([{h:"TRAINING MEETING REPORT"},{h:"Security Training Program 2027",size:11},
+   kv("Month",P[cur][0]),kv("Topic",P[cur][1]),kv("Scheduled date",fmt(P[cur][2])),kv("Date held",r.date),kv("Venue",r.venue),kv("Trainer",r.trainer),kv("Duration (hours)",r.dur),kv("Number attended",String(a.length)),
+   kv("Points covered",r.cov),kv("Observations",r.obs),kv("Action points",r.act),{h:" ",size:6},
+   {head:1,row:["#","Attendee","Signature"],w:[8,52,40]},...a.map((n,i)=>({row:[String(i+1),n,""],w:[8,52,40]}))]),"Training_Report_"+P[cur][0]+"_2027.pdf");
 };
 render();
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
