@@ -35,6 +35,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .date span{font-size:.8rem;color:var(--mute)}
 .info{flex:1;min-width:0}
 .info h3{margin:0;font-size:1rem}
+.btns{display:flex;gap:6px;flex-wrap:wrap}.mb h4{margin:12px 0 4px}.mb ul{margin:0;padding-left:20px}.mb p{margin:4px 0}.sum{background:var(--bg);border-left:5px solid var(--amber);padding:8px 10px;border-radius:6px}
 .chip{display:inline-block;font-size:.78rem;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mute);margin-top:4px}
 .chip.done{color:var(--ok);border-color:var(--ok)}
 .chip.due{color:var(--ink);background:var(--amber);border-color:var(--amber)}
@@ -56,8 +57,8 @@ footer{text-align:center;color:var(--mute);font-size:.82rem;padding:18px}
 </header>
 <main>
   <div class="bar">
-    <button id="xl">Export program (Excel)</button>
-    <button id="pd">Export program (PDF)</button>
+    <button id="xl">Export program + material (Excel)</button>
+    <button id="pd">Export program + material (PDF)</button>
     <button id="rx" class="alt">Export all reports (Excel)</button>
   </div>
   <div id="next" class="next"></div>
@@ -91,6 +92,16 @@ footer{text-align:center;color:var(--mute);font-size:.82rem;padding:18px}
   </div>
 </dialog>
 
+<dialog id="mdlg">
+  <h2 id="mt" style="margin:0 0 4px;font-size:1.15rem"></h2>
+  <div id="mb" class="mb"></div>
+  <div class="act">
+    <button id="mw">Write report</button>
+    <button id="mp" class="alt">Download module (PDF)</button>
+    <button id="mc" class="alt">Close</button>
+  </div>
+</dialog>
+
 <script>
 const P=[
 ["January","ACCESS CONTROL / GATE MANAGEMENT","2027-01-15"],
@@ -106,6 +117,57 @@ const P=[
 ["November","SECURITY DOCUMENTATION","2027-11-26"],
 ["December","REVIEW OF SECURITY ACTIVITIES IN THE OUTGOING YEAR","2027-12-10"]
 ];
+const MAT=[
+{o:"Control who and what enters and leaves Sunsteel Industries premises, consistently and courteously.",
+k:["Verify the identity of every visitor, contractor and driver before entry; no ID, no entry.","Issue visitor and vehicle passes; record time in and out, host and purpose of visit.","Inspect vehicles, bags and goods at entry and exit as company policy allows.","Match outgoing goods against the gate pass or delivery document before release.","Keep the gate area clear; refuse unauthorised access and refer disputes to the supervisor.","Keep the gate register complete, legible and handed over at every shift change."],
+a:"Gate staff apply Sunsteel's pass system to employees, visitors, haulage trucks and material movements.",
+s:"The gate is the first layer of protection. Verify, record, inspect, and escalate every doubt."},
+{o:"Make every guard understand their duties, limits of authority and the value of staying alert.",
+k:["The guard's role: protect people, property and information; prevent rather than react.","Know your post orders, the site layout, key contacts and emergency numbers.","Authority is limited: observe, deter, report and detain only as the law and policy permit.","Report anything unusual, however small, to the supervisor at once.","Treat staff, visitors and the public with respect; stay neutral in disputes.","Be punctual, in correct uniform and fit for duty at all times."],
+a:"Each Sunsteel guard should be able to explain their post orders and who to call for each type of incident.",
+s:"Aware guards prevent incidents. Know your duties, know your limits, and report early."},
+{o:"Carry out effective patrols and surveillance that deter and detect wrongdoing.",
+k:["Plan routes and vary timings so patrol patterns are not predictable.","Check fences, doors, locks, lighting, stores and high-risk areas on each round.","Use the patrol clock, checkpoints or logbook to prove each round was done.","Watch CCTV actively: note camera faults, blind spots and suspicious behaviour.","Never patrol alone in unsafe areas without radio contact.","Record findings and report hazards such as damaged fences or faulty lights."],
+a:"Patrols at Sunsteel cover the perimeter, yards, stores, production areas and car parks, day and night.",
+s:"Patrol with purpose: vary routes, check key points, record every round and report defects."},
+{o:"Communicate clearly and write accurate, timely security reports.",
+k:["Use the radio and phone correctly: be brief, clear and use agreed codes.","Know the reporting chain: guard, supervisor, security manager, management.","Reports answer who, what, when, where, why and how.","Stick to facts; do not guess or add opinion.","Write incident reports before going off duty while details are fresh.","Pass key information in person at shift handover."],
+a:"Incidents at Sunsteel are reported on the company incident form and escalated through the security supervisor.",
+s:"Clear communication and factual reports turn events into evidence and action."},
+{o:"Prevent theft and protect Sunsteel Industries' assets, materials and finished goods.",
+k:["Know the common theft risks: scrap and raw materials, tools, fuel, finished goods and staff property.","Control movement of goods with gate passes, waybills and signed authorisation.","Watch for warning signs: unusual loads, altered documents, loitering and collusion.","Secure stores, keys and high-value items; keep key registers current.","Apply search procedures fairly and consistently.","Preserve the scene and evidence when theft is discovered and report immediately."],
+a:"Typical Sunsteel risks include metal scrap, tools, vehicles and stock moving through the gate and yards.",
+s:"Theft prevention depends on controls and alertness. Control movement, secure stores and report early."},
+{o:"Respond quickly and safely to emergencies and support crisis management.",
+k:["Know the emergency types: fire, injury, intrusion, explosion, spill, civil disturbance.","Raise the alarm, call emergency services and inform the supervisor immediately.","Protect life first, then property; do not put yourself at needless risk.","Guide people to assembly points and keep roads clear for responders.","Control access to the scene and keep a log of times and actions.","Take part in drills and review lessons afterwards."],
+a:"Sunsteel's emergency plan, assembly points and contact list should be known by every guard on every shift.",
+s:"Alarm, protect life, control the scene, record, and practise through drills."},
+{o:"Prevent fires and use firefighting equipment correctly.",
+k:["The fire triangle: heat, fuel and oxygen; remove one to stop a fire.","Common causes: electrical faults, hot work, smoking, poor storage and housekeeping.","Know extinguisher types (water, foam, CO2, dry powder) and what each is for.","Use PASS: Pull, Aim, Squeeze, Sweep; fight a fire only if safe and the exit is behind you.","Check extinguishers, hydrants, alarms and exit routes; report faults.","On fire: raise the alarm, evacuate, call the fire service and meet at the assembly point."],
+a:"Sunsteel's industrial areas with hot work and flammable materials need regular fire checks by security.",
+s:"Prevent first, know your equipment, raise the alarm and put safety before property."},
+{o:"Build professional behaviour and self-discipline across the security team.",
+k:["Be honest, reliable and never accept bribes or favours.","Stay courteous and calm, even under provocation.","Keep a smart uniform and good personal hygiene.","Never sleep, drink alcohol or use phones for personal use on duty.","Respect confidentiality of company and visitor information.","Know the disciplinary code and report misconduct by anyone."],
+a:"Guards represent Sunsteel Industries to every visitor and customer who passes the gate.",
+s:"Discipline and integrity protect your reputation and the company's."},
+{o:"Understand basic investigation methods for security incidents.",
+k:["Secure and preserve the scene; limit access to those who must be there.","Document with notes, photographs and sketches before anything is moved.","Identify and interview witnesses separately; record statements accurately.","Handle evidence carefully, label it and keep a chain-of-custody record.","Review CCTV footage, registers and passes to establish the sequence of events.","Write a factual report with findings and recommendations, then hand over to management or police."],
+a:"At Sunsteel, security assists management investigations and gives full records but does not accuse without evidence.",
+s:"Preserve, document, interview, protect evidence and report objectively."},
+{o:"Notice early signs of danger and respond before an incident develops.",
+k:["Situational awareness: know what is normal, so you can spot what is not.","Warning signs: unfamiliar persons, surveillance of the site, unattended bags or vehicles, forced locks.","Keep scanning your surroundings; avoid distractions.","Trust your instinct and verify, without confronting dangerously.","Report threats at once and keep a safe distance.","Review threat risks regularly and adjust deployment."],
+a:"Guards at Sunsteel should know normal routines at each post so unusual activity stands out.",
+s:"See early, verify safely, report quickly."},
+{o:"Keep accurate, complete and secure security records.",
+k:["Key records: gate and visitor registers, patrol logs, incident reports, key register, shift handover book.","Write legibly, with date, time and signature; no erasing, strike through errors and initial.","Keep records in order and in a safe place; follow retention rules.","Protect personal and company information; share only on a need-to-know basis.","Use records to analyse trends and plan improvements.","Reports must be factual and ready for audit or investigation."],
+a:"Sunsteel audits and investigations rely on good security records.",
+s:"If it is not written down, it did not happen. Record accurately and keep it safe."},
+{o:"Review the year's security performance and set priorities for the next year.",
+k:["Review incidents, near misses, thefts, audits and drills carried out during 2027.","Measure results against the training program and attendance.","Identify recurring problems, root causes and gaps in skills or equipment.","Recognise good performance by individuals and teams.","Agree corrective actions, owners and deadlines.","Draft the training priorities for the coming year."],
+a:"Sunsteel management and security review lessons learned and agree next-year targets.",
+s:"Learn from the year, fix the gaps and plan the next training cycle."}
+];
+const matItems=i=>{const m=MAT[i];return[{h:P[i][0].toUpperCase()+": "+P[i][1],size:12},{p:"Date: "+fmt(P[i][2])+"  |  Reference company: Sunsteel Industries"},{p:"Objective: "+m.o,bold:1},{p:"Training material:",bold:1},...m.k.map(x=>({p:"- "+x})),{p:"Application at Sunsteel Industries: "+m.a},{p:"Summary: "+m.s,bold:1},{h:" ",size:6}]};
 const KEY="stp2027_reports";
 let R={},cur=0;
 try{R=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){R={}}
@@ -123,9 +185,20 @@ function render(){
     const d=new Date(p[2]+"T00:00:00");
     return `<div class="row"><div class="date"><strong>${d.getDate()}</strong><span>${p[0].slice(0,3)}</span></div>
     <div class="info"><h3>${p[1]}</h3><span class="chip ${done?"done":due?"due":""}">${done?"Report saved":due?"Report due":"Upcoming"}</span></div>
-    <button class="${done?"alt":""}" data-i="${i}">${done?"View report":"Write report"}</button></div>`}).join("");
-  document.querySelectorAll(".row button").forEach(b=>b.onclick=()=>openR(+b.dataset.i));
+    <div class="btns"><button class="alt" data-m="${i}">Training material</button><button class="${done?"alt":""}" data-i="${i}">${done?"View report":"Write report"}</button></div></div>`}).join("");
+  document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openM(+b.dataset.m));
+  document.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>openR(+b.dataset.i));
 }
+let mcur=0;
+function openM(i){
+  mcur=i;const m=MAT[i];
+  $("mt").textContent=P[i][0]+": "+P[i][1];
+  $("mb").innerHTML="<p><small>"+fmt(P[i][2])+" | Reference company: Sunsteel Industries</small></p><h4>Objective</h4><p>"+m.o+"</p><h4>Training material</h4><ul>"+m.k.map(x=>"<li>"+x+"</li>").join("")+"</ul><h4>Application at Sunsteel Industries</h4><p>"+m.a+"</p><h4>Summary</h4><p class=\"sum\">"+m.s+"</p>";
+  $("mdlg").showModal();
+}
+$("mc").onclick=()=>$("mdlg").close();
+$("mw").onclick=()=>{$("mdlg").close();openR(mcur)};
+$("mp").onclick=()=>save(makePdf([{h:"SECURITY TRAINING PROGRAM 2027"},...matItems(mcur)]),"Training_Material_"+P[mcur][0]+"_2027.pdf");
 function openR(i){
   cur=i;const r=R[i]||{date:P[i][2]};
   $("dt").textContent=P[i][0]+": "+P[i][1];
@@ -181,6 +254,7 @@ function makePdf(items){
   const T=(f,sz,x,yy,s)=>`BT /${f} ${sz} Tf ${x} ${yy} Td (${esc(s)}) Tj ET`;
   for(const it of items){
     if(it.h){if(y-30<M)np();cur.push("0 g",T("F2",it.size||14,M,y-14,it.h));y-=(it.size||14)+12;continue}
+    if(it.p){const sz=10,n=Math.floor((W-2*M)/(sz*0.55));for(const l of wrap(it.p,n)){if(y-14<M)np();cur.push("0 g",T(it.bold?"F2":"F1",sz,M,y-11,l));y-=13}y-=3;continue}
     const cw=it.w.map(w=>w/it.w.reduce((a,b)=>a+b)*(W-2*M));
     const ls=it.row.map((c,i)=>wrap(c,Math.max(3,Math.floor((cw[i]-8)/5.3))));
     const n=Math.max(1,...ls.map(l=>l.length)),h=n*12+8;
@@ -211,8 +285,8 @@ function makePdf(items){
 }
 function save(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
 
-$("xl").onclick=()=>save(makeXlsx("Program 2027",[["S/N","Month","Topic","Date","Status"],...P.map((p,i)=>[i+1,p[0],p[1],fmt(p[2]),R[i]?"Report saved":"Scheduled"])],[6,12,55,20,14]),"Security_Training_Program_2027.xlsx");
-$("pd").onclick=()=>save(makePdf([{h:"ANNUAL SECURITY TRAINING PROGRAM FOR 2027"},{head:1,row:["S/N","Month","Topic","Date"],w:[8,16,55,21]},...P.map((p,i)=>({row:[String(i+1),p[0].toUpperCase(),p[1],fmt(p[2])],w:[8,16,55,21]}))]),"Security_Training_Program_2027.pdf");
+$("xl").onclick=()=>save(makeXlsx("Program 2027",[["S/N","Month","Topic","Date","Status","Objective","Training material","Application at Sunsteel Industries","Summary"],...P.map((p,i)=>[i+1,p[0],p[1],fmt(p[2]),R[i]?"Report saved":"Scheduled",MAT[i].o,MAT[i].k.map((x,j)=>(j+1)+". "+x).join("  "),MAT[i].a,MAT[i].s])],[6,12,45,20,14,45,90,45,45]),"Security_Training_Program_2027.xlsx");
+$("pd").onclick=()=>save(makePdf([{h:"ANNUAL SECURITY TRAINING PROGRAM FOR 2027"},{p:"Reference company: Sunsteel Industries"},{head:1,row:["S/N","Month","Topic","Date"],w:[8,16,55,21]},...P.map((p,i)=>({row:[String(i+1),p[0].toUpperCase(),p[1],fmt(p[2])],w:[8,16,55,21]})),{h:" ",size:10},{h:"TRAINING MATERIAL AND SUMMARIES",size:14},...P.flatMap((_,i)=>matItems(i))]),"Security_Training_Program_2027.pdf");
 $("rx").onclick=()=>{
   const ks=Object.keys(R).sort((a,b)=>a-b);if(!ks.length){alert("No reports saved yet. Write a report after a meeting first.");return}
   save(makeXlsx("Meeting reports",[["Month","Topic","Date held","Venue","Trainer","Hours","Attendance","Attendees","Points covered","Observations","Action points"],...ks.map(i=>{const r=R[i];return[P[i][0],P[i][1],r.date,r.venue,r.trainer,r.dur,names(r.att).length,names(r.att).join(", "),r.cov,r.obs,r.act]})],[12,40,12,18,18,8,11,40,40,40,40]),"Security_Training_Reports_2027.xlsx");
